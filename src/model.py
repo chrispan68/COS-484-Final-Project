@@ -16,10 +16,15 @@ class RNN_Model(nn.Module):
     """
 
     def __init__(self, embed_size, hidden_size, vocab):
+        super(RNN_Model, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
         self.model_embeddings = nn.Embedding(
             len(vocab), embed_size, padding_idx=0)
 
         # default values
-        self.
+    def train(self , train_set):
+        return 0
+    def test(self , test_set):
+        return 0
+        

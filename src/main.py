@@ -1,5 +1,6 @@
 import math
 import time
+import argparse
 from model import RNN_Model
 import numpy as numpy
 from typing import List
@@ -13,10 +14,11 @@ import random
 
 def process_data(fpath: str):
     text = open(fpath, 'r', encoding='utf8')
-    print(text.readline())  # do not remove this line
+    text.readline() # do not remove this line
 
     data = []
     ctr = 0
+    vocab = set()
     for line in text:
         new_data = []
         items = re.split('(,)(?=(?:[^"]|"[^"]*")*$)', line)
@@ -29,6 +31,8 @@ def process_data(fpath: str):
 
         text = items[14]
         text = text.replace('"', ' ')
+        for word in text.split():
+            vocab.add(word)
         city = items[18].strip("[").strip("]").strip(":")
         city = "".join(city.split())
         new_data = {"id": items[0], "text": text, "year": year, "city": items[18],
@@ -109,8 +113,8 @@ def process_data(fpath: str):
 
     random.shuffle(train_set)
     random.shuffle(test_set)
-    print("TRAIN SET", train_set)
-    print("TEST SET", test_set)
+    #print("TRAIN SET", train_set)
+    #print("TEST SET", test_set)
 
     print("---INFO---")
     print("Train set data by period (" + str(len(train_set)) + " total examples):")
@@ -146,13 +150,13 @@ def process_data(fpath: str):
 
     # Then return val dict and train dict
 
-    return train_set, test_set, period_counts
+    return vocab, train_set, test_set, period_counts
 
 
 def post_compute(labeled_data, word2ind):
+    return labeled_data
 
-
-if __name__ == '--main--':
+if __name__ == '__main__':
     assert(torch.__version__ == "1.3.0"), \
         "Please update your installation of PyTorch. " \
         "You have {} and you should have version 1.3.0".format(
@@ -166,17 +170,18 @@ if __name__ == '--main--':
     parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--embed_size", default=64, type=int)
     parser.add_argument("--hidden_size", default=64, type=int)
+    
+    args = parser.parse_args()
+    vocab , train_set , test_set , period_counts = process_data(args.source)
 
-    data, vocab = process_data(args.source)
     word2ind = {}
-    for i in range(0, len(vocab)):
-        word2ind[vocab[i]] = i
-
-    traindata, devdata = add_labels(data)
-    traindata = traindata
+    i = 4
+    for word in vocab:
+        word2ind[word] = i
+        i += 1
 
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size=args.hidden_size,
-                      vocab)
-    model.train(traindata)
-    model.test(devdata)
+                      vocab=vocab)
+    model.train(train_set)
+    model.test(test_set)
