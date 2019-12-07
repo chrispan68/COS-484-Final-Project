@@ -24,7 +24,9 @@ if __name__ == '--main--':
     parser.add_argument("--hidden_size", default=64, type=int)
     
     data = process_data(args.source)
-    testdata , devdata = add_labels(data)
+    traindata , devdata = add_labels(data)
     
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size = args.hidden_size)
+    model.train(traindata)
+    model.test(devdata)
