@@ -24,10 +24,11 @@ if __name__ == '--main--':
     parser.add_argument("--embed_size", default=64, type=int)
     parser.add_argument("--hidden_size", default=64, type=int)
     
-    data = process_data(args.source)
+    data , vocab = process_data(args.source)
     traindata , devdata = add_labels(data)
     
     model = RNN_Model(embed_size=args.embed_size,
-                      hidden_size = args.hidden_size)
+                      hidden_size = args.hidden_size , 
+                      vocab)
     model.train(traindata)
     model.test(devdata)

@@ -38,4 +38,7 @@ class RNN_Model(nn.Module):
     @param embed_size (int): Size of word embedding
     @param hidden_size (int): Size of hidden vector
     """
-    def __init__(self , embed_size , hidden_size , 
+    def __init__(self , embed_size , hidden_size):
+        self.hidden_size = hidden_size
+        self.embed_size = embed_size
+        self.embedding
