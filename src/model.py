@@ -32,4 +32,10 @@ class ModelEmbeddings(nn.Module):
         self.source = nn.Embedding(len(vocab.src), embed_size, padding_idx=src_pad_token_idx)
         self.target = nn.Embedding(len(vocab.tgt), embed_size, padding_idx=tgt_pad_token_idx)
 
-    
+class RNN_Model(nn.Module):
+    """Basic RNN LSTM classifier
+
+    @param embed_size (int): Size of word embedding
+    @param hidden_size (int): Size of hidden vector
+    """
+    def __init__(self , embed_size , hidden_size , 
