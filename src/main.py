@@ -189,9 +189,8 @@ if __name__ == '__main__':
     train_input = [] #(Num Examples / Batch) x Batch x maxL 
     test_input = [] #(Num Examples / Batch) x Batch x maxL
     batch = [] #a temporary list that holds the current batch
-    batch_cnter = 1
     for train_ex in train_set:
-        if(batch_cnter == 0):
+        if(len(batch) == args.batch_size):
             train_input.append(batch)
             batch = []
         tmp = []
@@ -206,9 +205,8 @@ if __name__ == '__main__':
         train_input.append(batch)
     
     batch = [] #a temporary list that holds the current batch
-    batch_cnter = 1
     for train_ex in test_set:
-        if(batch_cnter == 0):
+        if(len(batch) == args.batch_size):
             test_input.append(batch)
             batch = []
         tmp = []
@@ -221,10 +219,9 @@ if __name__ == '__main__':
         batch.append(tmp)
     if(len(batch) > 0):
         test_input.append(batch)
-    print(str(train_set[0]["text"]))
-    print(str(train_input[0][0]))
-    print(str(test_set[0]["text"]))
-    print(str(test_input[0][0]))
+    
+    print(str(len(train_set)))
+    print(str(len(train_input)))
     
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size=args.hidden_size,
