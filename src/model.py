@@ -12,7 +12,7 @@ class RNN_Model(nn.Module):
 
     @param embed_size (int): Size of word embedding
     @param hidden_size (int): Size of hidden vector
-    @param vocab (List[str]): list of wor
+    @param vocab (List[str]): list of words
     """
 
     def __init__(self, embed_size, hidden_size, vocab):
@@ -21,10 +21,11 @@ class RNN_Model(nn.Module):
         self.embed_size = embed_size
         self.model_embeddings = nn.Embedding(
             len(vocab), embed_size, padding_idx=0)
+        
 
         # default values
-    def train(self , train_set):
+    def train(self , train_set , train_input):
         return 0
-    def test(self , test_set):
+    def test(self , test_set , test_input):
         return 0
         

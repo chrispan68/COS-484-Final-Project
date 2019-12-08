@@ -17,6 +17,7 @@ def process_data(fpath: str):
     text.readline() # do not remove this line
 
     data = []
+    maxl = 0
     ctr = 0
     vocab = set()
     for line in text:
@@ -31,12 +32,14 @@ def process_data(fpath: str):
 
         text = items[14]
         text = text.replace('"', ' ')
-        for word in text.split():
+        words = text.split()
+        maxl = max(maxl , len(words))
+        for word in words:
             vocab.add(word)
         city = items[18].strip("[").strip("]").strip(":")
         city = "".join(city.split())
         new_data = {"id": items[0], "text": text, "year": year, "city": items[18],
-                    "region": None, "period": None}  # [id, text, date, place]
+                    "region": None, "period": None , "words": words}  # [id, text, date, place]
         data.append(new_data)
 
     # Get region: British, American, or other
@@ -150,7 +153,7 @@ def process_data(fpath: str):
 
     # Then return val dict and train dict
 
-    return vocab, train_set, test_set, period_counts
+    return vocab, train_set, test_set, period_counts , maxl
 
 
 def post_compute(labeled_data, word2ind):
@@ -172,16 +175,23 @@ if __name__ == '__main__':
     parser.add_argument("--hidden_size", default=64, type=int)
     
     args = parser.parse_args()
-    vocab , train_set , test_set , period_counts = process_data(args.source)
+    vocab , train_set , test_set , period_counts , maxl = process_data(args.source)
 
     word2ind = {}
-    i = 4
+    word2ind["<pad>"] = 0
+    word2ind["<start>"] = 1
+    word2ind["<end>"] = 2
+    word2ind["<unknown>"] = 3
+    vocab_size = 4
     for word in vocab:
-        word2ind[word] = i
-        i += 1
-
+        word2ind[word] = vocab_size
+        vocab_size += 1
+    train_input = [] #(Num Examples / Batch) x Batch x maxL 
+    test_input = [] #(Num Examples / Batch) x Batch x maxL
+    train_set[""]
+    
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size=args.hidden_size,
                       vocab=vocab)
-    model.train(train_set)
-    model.test(test_set)
+    model.train(train_set , train_input)
+    model.test(test_set , test_input)
