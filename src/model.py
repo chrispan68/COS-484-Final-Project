@@ -15,12 +15,12 @@ class RNN_Model(nn.Module):
     @param vocab (List[str]): list of words
     """
 
-    def __init__(self, embed_size, hidden_size, vocab):
+    def __init__(self, embed_size, hidden_size, vocab_len):
         super(RNN_Model, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
         self.model_embeddings = nn.Embedding(
-            len(vocab), embed_size, padding_idx=0)
+            vocab_len, embed_size, padding_idx=0)
         
 
         # default values

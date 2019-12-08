@@ -33,7 +33,7 @@ def process_data(fpath: str):
         text = items[14]
         text = text.replace('"', ' ')
         words = text.split()
-        maxl = max(maxl , len(words))
+        maxl = max(maxl , len(words) + 2)
         for word in words:
             vocab.add(word)
         city = items[18].strip("[").strip("]").strip(":")
@@ -188,10 +188,46 @@ if __name__ == '__main__':
         vocab_size += 1
     train_input = [] #(Num Examples / Batch) x Batch x maxL 
     test_input = [] #(Num Examples / Batch) x Batch x maxL
-    train_set[""]
+    batch = [] #a temporary list that holds the current batch
+    batch_cnter = 1
+    for train_ex in train_set:
+        if(batch_cnter == 0):
+            train_input.append(batch)
+            batch = []
+        tmp = []
+        tmp.append(1)
+        for word in train_ex["words"]:
+            tmp.append(word2ind[word])
+        for i in range(0 , maxl - 1 - len(train_ex["words"])):
+            tmp.append(0)
+        tmp.append(2)
+        batch.append(tmp)
+    if(len(batch) > 0):
+        train_input.append(batch)
+    
+    batch = [] #a temporary list that holds the current batch
+    batch_cnter = 1
+    for train_ex in test_set:
+        if(batch_cnter == 0):
+            test_input.append(batch)
+            batch = []
+        tmp = []
+        tmp.append(1)
+        for word in train_ex["words"]:
+            tmp.append(word2ind[word])
+        for i in range(0 , maxl - 1 - len(train_ex["words"])):
+            tmp.append(0)
+        tmp.append(2)
+        batch.append(tmp)
+    if(len(batch) > 0):
+        test_input.append(batch)
+    print(str(train_set[0]["text"]))
+    print(str(train_input[0][0]))
+    print(str(test_set[0]["text"]))
+    print(str(test_input[0][0]))
     
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size=args.hidden_size,
-                      vocab=vocab)
+                      vocab_len=vocab_size)
     model.train(train_set , train_input)
     model.test(test_set , test_input)
