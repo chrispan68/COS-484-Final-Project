@@ -26,7 +26,6 @@ def process_data(fpath: str):
         try:
             year = int(items[16])
         except ValueError:
-            print("NOT INT", items)
             continue
 
         text = items[14]
@@ -99,14 +98,12 @@ def process_data(fpath: str):
             label += 1
             if doc['year'] >= period[0] and doc['year'] <= period[1]:
                 data[index]['period'] = period
-                data[index]['period_id'] = label
+                data[index]['time_id'] = label
                 if doc['region'] == "US":
                     period_counts[period][0] += 1
                 else:
                     period_counts[period][1] += 1
                 break
-
-    print("Overall period counts:", period_counts)
 
     # Keep only British and American documents; sample evenly from US and UK
     random.shuffle(data)
@@ -120,11 +117,7 @@ def process_data(fpath: str):
 
     random.shuffle(train_set)
     random.shuffle(test_set)
-    #print("TRAIN SET", train_set)
-    #print("TEST SET", test_set)
 
-    print("---INFO---")
-    print("Train set data by period (" + str(len(train_set)) + " total examples):")
     period_counts = OrderedDict({(1550, 1799): [0, 0], (1800, 1842): [0, 0], (1843, 1859): [0, 0],
                                  (1860, 1874): [0, 0], (1875, 1890): [0, 0], (1891, 1901): [0, 0],
                                  (1902, 1912): [0, 0], (1913, 1923): [0, 0]})
@@ -136,9 +129,7 @@ def process_data(fpath: str):
                 else:
                     period_counts[period][1] += 1
                 break
-    print(period_counts)
-
-    print("Test set data by period (" + str(len(test_set)) + " total examples):")
+    
     period_counts = OrderedDict({(1550, 1799): [0, 0], (1800, 1842): [0, 0], (1843, 1859): [0, 0],
                                  (1860, 1874): [0, 0], (1875, 1890): [0, 0], (1891, 1901): [0, 0],
                                  (1902, 1912): [0, 0], (1913, 1923): [0, 0]})
@@ -152,8 +143,6 @@ def process_data(fpath: str):
                 else:
                     period_counts[period][1] += 1
                 break
-
-    print(period_counts)
 
     # Then return val dict and train dict
 
@@ -191,12 +180,20 @@ if __name__ == '__main__':
         word2ind[word] = vocab_size
         vocab_size += 1
     train_input = [] #(Num Examples / Batch) x Batch x maxL 
+    train_output_region = [[[0]*2]*args.batch_size]*(math.ceil(len(train_set) / args.batch_size))#(Num Examples / Batch) x Batch x 2
+    train_output_time = [[[0]*8]*args.batch_size]*(math.ceil(len(train_set) / args.batch_size))#(Num Examples / Batch) x Batch x 8
     test_input = [] #(Num Examples / Batch) x Batch x maxL
+    test_output_region = [[[0]*2]*args.batch_size]*(math.ceil(len(test_set) / args.batch_size)) #(Num Examples / Batch) x Batch x 2
+    test_output_time = [[[0]*8]*args.batch_size]*(math.ceil(len(test_set) / args.batch_size)) #(Num Examples / Batch) x Batch x 8
     batch = [] #a temporary list that holds the current batch
+    index = 0
     for train_ex in train_set:
         if(len(batch) == args.batch_size):
             train_input.append(batch)
             batch = []
+            index += 1
+        train_output_region[index][len(batch)][train_ex["region_id"]] = 1
+        train_output_time[index][len(batch)][train_ex["time_id"]] = 1
         tmp = []
         tmp.append(1)
         for word in train_ex["words"]:
@@ -209,26 +206,27 @@ if __name__ == '__main__':
         train_input.append(batch)
     
     batch = [] #a temporary list that holds the current batch
-    for train_ex in test_set:
+    index = 0
+    for test_ex in test_set:
         if(len(batch) == args.batch_size):
             test_input.append(batch)
             batch = []
+            index += 1
+        test_output_region[index][len(batch)][test_ex["region_id"]] = 1
+        test_output_time[index][len(batch)][test_ex["time_id"]] = 1
         tmp = []
         tmp.append(1)
-        for word in train_ex["words"]:
+        for word in test_ex["words"]:
             tmp.append(word2ind[word])
-        for i in range(0 , maxl - 1 - len(train_ex["words"])):
+        for i in range(0 , maxl - 1 - len(test_ex["words"])):
             tmp.append(0)
         tmp.append(2)
         batch.append(tmp)
     if(len(batch) > 0):
         test_input.append(batch)
     
-    print(str(train_set[1982]["period_id"]))
-    print(str(train_set[1272]["region_id"]))
-    
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size=args.hidden_size,
                       vocab_len=vocab_size)
-    model.train(train_set , train_input)
-    model.test(test_set , test_input)
+    model.train(train_input , train_output_region , train_output_time) 
+    model.test(test_input , test_output_region , test_output_time)

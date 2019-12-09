@@ -25,25 +25,35 @@ class RNN_Model(nn.Module):
             vocab_len, embed_size, padding_idx=0)
         
         #layers
-        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=True)
+        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=False , batch_first=True)
         self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
         self.softmax_region = nn.Softmax(1)
         self.linear_time = nn.Linear(hidden_size , 8 , bias=False)
         self.softmax_time = nn.Softmax(1)
         #
 
-    """Forward props the RNN, returns both the output vector for the location and the period. 
+    """Forward props the RNN, returns both the output tensor for the location and the period. 
 
 
     @param input_batch, a maxl by batch_size input that is a list of lists
     
     """
     def forward(self , input_batch):
+        x = torch.tensor(input_batch)
+        x = self.model_embeddings(x)
+        o , (h_final , c)= self.rnn_lstm(x)
+        h_final = torch.squeeze(h_final , dim=0)
+        output_region = self.linear_region(h_final)
+        output_time = self.linear_time(h_final)
+
+        print(str(output_region.size()))
+        print(str(output_time.size()))
         
-        return 0
+        return output_region , output_time
         # default values
-    def train(self , train_set , train_input):
+    def train(self , train_input , train_output_region , train_output_time):
+        self.forward(train_input[0])
         return 0
-    def test(self , test_set , test_input):
+    def test(self , test_input , test_output_region , test_output_time):
         return 0
         
