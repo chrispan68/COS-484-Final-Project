@@ -18,7 +18,6 @@ def process_data(fpath: str):
 
     data = []
     maxl = 0
-    ctr = 0
     vocab = set()
     for line in text:
         new_data = []
@@ -39,7 +38,7 @@ def process_data(fpath: str):
         city = items[18].strip("[").strip("]").strip(":")
         city = "".join(city.split())
         new_data = {"id": items[0], "text": text, "year": year, "city": items[18],
-                    "region": None, "period": None , "words": words}  # [id, text, date, place]
+                    "region": None, "period": None , "words": words , "region_id": None , "time_id": None}  # [id, text, date, place]
         data.append(new_data)
 
     # Get region: British, American, or other
@@ -65,6 +64,7 @@ def process_data(fpath: str):
         for city in us_list:
             if city in doc["city"]:
                 doc["region"] = "US"
+                doc["region_id"] = 0
                 counts[0] += 1
                 categorized = True
 
@@ -72,6 +72,7 @@ def process_data(fpath: str):
             for city in uk_list:
                 if city in doc["city"]:
                     doc["region"] = "UK"
+                    doc["region_id"] = 1
                     counts[1] += 1
                     categorized = True
 
@@ -79,6 +80,7 @@ def process_data(fpath: str):
             for city in europe_list:
                 if city in doc["city"]:
                     doc["region"] = "Europe"
+                    doc["region_id"] = 2
                     counts[2] += 1
                     categorized = True
 
@@ -92,10 +94,12 @@ def process_data(fpath: str):
                                  (1902, 1912): [0, 0], (1913, 1923): [0, 0]})
 
     for index, doc in enumerate(data):
+        label = -1
         for period in period_counts:
+            label += 1
             if doc['year'] >= period[0] and doc['year'] <= period[1]:
                 data[index]['period'] = period
-
+                data[index]['period_id'] = label
                 if doc['region'] == "US":
                     period_counts[period][0] += 1
                 else:
@@ -220,8 +224,8 @@ if __name__ == '__main__':
     if(len(batch) > 0):
         test_input.append(batch)
     
-    print(str(len(train_set)))
-    print(str(len(train_input)))
+    print(str(train_set[1982]["period_id"]))
+    print(str(train_set[1272]["region_id"]))
     
     model = RNN_Model(embed_size=args.embed_size,
                       hidden_size=args.hidden_size,
