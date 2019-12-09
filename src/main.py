@@ -199,9 +199,9 @@ if __name__ == '__main__':
         tmp.append(1)
         for word in train_ex["words"]:
             tmp.append(word2ind[word])
+        tmp.append(2)
         for i in range(0 , maxl - 1 - len(train_ex["words"])):
             tmp.append(0)
-        tmp.append(2)
         batch.append(tmp)
     if(len(batch) > 0):
         train_input.append(batch)
@@ -214,9 +214,9 @@ if __name__ == '__main__':
         tmp.append(1)
         for word in test_ex["words"]:
             tmp.append(word2ind[word])
+        tmp.append(2)
         for i in range(0 , maxl - 1 - len(test_ex["words"])):
             tmp.append(0)
-        tmp.append(2)
         test_input.append(tmp)
     
     model = RNN_Model(embed_size=args.embed_size,
