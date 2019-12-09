@@ -67,16 +67,20 @@ class RNN_Model(nn.Module):
                 self.optimizer.step()
         return
     def test(self , test_input , test_output_region , test_output_time):
-        numcorrect = 0
+
+        confusion_time = [[0]*8]*8
+        confusion_region = [[0]*2]*2
         for i in range(0 , len(test_input)):
                 prediction_region , prediction_time = self.forward([test_input[i]])
                 pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
                 ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
-                print(str(test_output_region[i]) + " " + str(test_output_time[i]))
-                if(pregion == test_output_region[i] and ptime == test_output_time[i]):
-                    numcorrect += 1
-        numcorrect = numcorrect / len(test_input)
-        print("Accuracy: " + str(numcorrect))
-
+                confusion_time[ptime][test_output_time[i]] += 1
+                confusion_region[pregion][test_output_region[i]] += 1
+        print("Confusion matrix for time:")
+        print('\n'.join([''.join(['{:4}'.format(item) for item in row]) 
+            for row in confusion_time]))
+        print("Confusion matrix for region:")
+        print('\n'.join([''.join(['{:4}'.format(item) for item in row]) 
+            for row in confusion_region]))
         return
         

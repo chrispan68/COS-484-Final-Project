@@ -184,8 +184,8 @@ if __name__ == '__main__':
     train_output_region = [[0]*args.batch_size]*(math.ceil(len(train_set) / args.batch_size))#(Num Examples / Batch) x Batch x 2
     train_output_time = [[0]*args.batch_size]*(math.ceil(len(train_set) / args.batch_size))#(Num Examples / Batch) x Batch x 8
     test_input = [] #Num Examples x maxL
-    test_output_region = [0]*len(test_set) #Num Examples
-    test_output_time = [0]*len(test_set) #Num examples
+    test_output_region = [] #Num Examples
+    test_output_time = [] #Num examples
     batch = [] #a temporary list that holds the current batch
     index = 0
     for train_ex in train_set:
@@ -224,10 +224,5 @@ if __name__ == '__main__':
                       vocab_len=vocab_size,
                       epoch=args.epoch_size,
                       learning_rate=args.lr)
-                      
-    print(str(test_output_time))
-    print(str(test_output_region))
     model.train(train_input , train_output_region , train_output_time) 
-    print(str(test_output_time))
-    print(str(test_output_region))
     model.test(test_input , test_output_region , test_output_time)
