@@ -15,22 +15,25 @@ class RNN_Model(nn.Module):
     @param vocab (List[str]): list of words
     """
 
-    def __init__(self, embed_size, hidden_size, vocab_len):
+    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate):
         super(RNN_Model, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
         self.num_regions = 3
         self.num_time_periods = 2
+        self.epoch_size = epoch
         self.model_embeddings = nn.Embedding(
             vocab_len, embed_size, padding_idx=0)
         
         #layers
         self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=False , batch_first=True)
         self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
-        self.softmax_region = nn.Softmax(1)
         self.linear_time = nn.Linear(hidden_size , 8 , bias=False)
-        self.softmax_time = nn.Softmax(1)
-        #
+
+        #functions and optimizers
+        self.softmax = nn.Softmax(1)
+        self.optimizer = torch.optim.Adam(self.parameters() , lr=learning_rate)
+        self.cost = nn.CrossEntropyLoss()
 
     """Forward props the RNN, returns both the output tensor for the location and the period. 
 
@@ -43,17 +46,37 @@ class RNN_Model(nn.Module):
         x = self.model_embeddings(x)
         o , (h_final , c)= self.rnn_lstm(x)
         h_final = torch.squeeze(h_final , dim=0)
-        output_region = self.linear_region(h_final)
-        output_time = self.linear_time(h_final)
-
-        print(str(output_region.size()))
-        print(str(output_time.size()))
-        
+        output_region = self.softmax(self.linear_region(h_final))
+        output_time = self.softmax(self.linear_time(h_final))
         return output_region , output_time
         # default values
     def train(self , train_input , train_output_region , train_output_time):
-        self.forward(train_input[0])
-        return 0
+        for epoc in range(0 , self.epoch_size):
+            print(epoc)
+            for i in range(0 , len(train_input)):
+                print(i)    
+                self.optimizer.zero_grad()
+                batch_input = train_input[i]
+                prediction_region , prediction_time = self.forward(batch_input)
+                batch_output_region = torch.tensor(train_output_region[i])
+                batch_output_time = torch.tensor(train_output_time[i])
+                loss = self.cost(prediction_region , batch_output_region)
+                loss.backward(retain_graph=True)
+                loss = self.cost(prediction_time , batch_output_time)
+                loss.backward()
+                self.optimizer.step()
+        return
     def test(self , test_input , test_output_region , test_output_time):
-        return 0
+        numcorrect = 0
+        for i in range(0 , len(test_input)):
+                prediction_region , prediction_time = self.forward([test_input[i]])
+                pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
+                ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
+                print(str(test_output_region[i]) + " " + str(test_output_time[i]))
+                if(pregion == test_output_region[i] and ptime == test_output_time[i]):
+                    numcorrect += 1
+        numcorrect = numcorrect / len(test_input)
+        print("Accuracy: " + str(numcorrect))
+
+        return
         
