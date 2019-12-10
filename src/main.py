@@ -17,7 +17,7 @@ def process_data(fpath: str):
     text.readline() # do not remove this line
 
     data = []
-    maxl = 0
+    maxl = 25
     vocab = set()
     for line in text:
         new_data = []
@@ -31,7 +31,6 @@ def process_data(fpath: str):
         text = items[14]
         text = text.replace('"', ' ')
         words = text.split()
-        maxl = max(maxl , len(words) + 2)
         for word in words:
             vocab.add(word)
         city = items[18].strip("[").strip("]").strip(":")
@@ -88,9 +87,8 @@ def process_data(fpath: str):
             counts[3] += 1
 
     # Get time period counts
-    period_counts = OrderedDict({(1550, 1799): [0, 0], (1800, 1842): [0, 0], (1843, 1859): [0, 0],
-                                 (1860, 1874): [0, 0], (1875, 1890): [0, 0], (1891, 1901): [0, 0],
-                                 (1902, 1912): [0, 0], (1913, 1923): [0, 0]})
+    period_counts = OrderedDict({(1550, 1842): [0, 0], (1843, 1874): [0, 0], (1875 , 1901): [0, 0],
+                                 (1902, 1923): [0, 0]})
 
     for index, doc in enumerate(data):
         label = -1
@@ -108,8 +106,8 @@ def process_data(fpath: str):
     # Keep only British and American documents; sample evenly from US and UK
     random.shuffle(data)
 
-    uk_data = [x for x in data if x['region'] == "UK"]
-    us_data = [x for x in data if x['region'] == "US"][:len(uk_data)]
+    uk_data = [x for x in data if(x['region'] == "UK" and len(x['words']) < 25)]
+    us_data = [x for x in data if(x['region'] == "US" and len(x['words']) < 25)][:len(uk_data)]
 
     split = int(.8*len(uk_data))
     train_set = uk_data[:split] + us_data[:split]
@@ -118,9 +116,8 @@ def process_data(fpath: str):
     random.shuffle(train_set)
     random.shuffle(test_set)
 
-    period_counts = OrderedDict({(1550, 1799): [0, 0], (1800, 1842): [0, 0], (1843, 1859): [0, 0],
-                                 (1860, 1874): [0, 0], (1875, 1890): [0, 0], (1891, 1901): [0, 0],
-                                 (1902, 1912): [0, 0], (1913, 1923): [0, 0]})
+    period_counts = OrderedDict({(1550, 1842): [0, 0], (1843, 1874): [0, 0], (1875 , 1901): [0, 0],
+                                 (1902, 1923): [0, 0]})
     for doc in train_set:
         for period in period_counts:
             if doc['year'] >= period[0] and doc['year'] <= period[1]:
@@ -130,9 +127,8 @@ def process_data(fpath: str):
                     period_counts[period][1] += 1
                 break
     
-    period_counts = OrderedDict({(1550, 1799): [0, 0], (1800, 1842): [0, 0], (1843, 1859): [0, 0],
-                                 (1860, 1874): [0, 0], (1875, 1890): [0, 0], (1891, 1901): [0, 0],
-                                 (1902, 1912): [0, 0], (1913, 1923): [0, 0]})
+    period_counts = OrderedDict({(1550, 1842): [0, 0], (1843, 1874): [0, 0], (1875 , 1901): [0, 0],
+                                 (1902, 1923): [0, 0]})
     for index, doc in enumerate(test_set):
         for period in period_counts:
             if doc['year'] >= period[0] and doc['year'] <= period[1]:
@@ -166,8 +162,8 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--embed_size", default=64, type=int)
     parser.add_argument("--hidden_size", default=64, type=int)
-    parser.add_argument("--epoch_size", default=1, type=int)
-    parser.add_argument("--lr", default=0.01, type=float)
+    parser.add_argument("--epoch_size", default=100, type=int)
+    parser.add_argument("--lr", default=0.001, type=float)
     args = parser.parse_args()
     vocab , train_set , test_set , period_counts , maxl = process_data(args.source)
 
@@ -180,21 +176,18 @@ if __name__ == '__main__':
     for word in vocab:
         word2ind[word] = vocab_size
         vocab_size += 1
-    train_input = [] #(Num Examples / Batch) x Batch x maxL 
-    train_output_region = [[0]*args.batch_size]*(math.ceil(len(train_set) / args.batch_size))#(Num Examples / Batch) x Batch x 2
-    train_output_time = [[0]*args.batch_size]*(math.ceil(len(train_set) / args.batch_size))#(Num Examples / Batch) x Batch x 8
+    train_input = [] #Num Examples x maxL 
+    train_output_region = [] #Num Examples
+    train_output_time = []#Num Examples
     test_input = [] #Num Examples x maxL
     test_output_region = [] #Num Examples
     test_output_time = [] #Num examples
     batch = [] #a temporary list that holds the current batch
-    index = 0
     for train_ex in train_set:
-        if(len(batch) == args.batch_size):
-            train_input.append(batch)
-            batch = []
-            index += 1
-        train_output_region[index][len(batch)] = train_ex["region_id"]
-        train_output_time[index][len(batch)] = train_ex["time_id"]
+        train_output_region.append(train_ex["region_id"])
+        train_output_time.append(train_ex["time_id"])
+
+        #formats the input via dictionary 
         tmp = []
         tmp.append(1)
         for word in train_ex["words"]:
@@ -202,14 +195,13 @@ if __name__ == '__main__':
         tmp.append(2)
         for i in range(0 , maxl - 1 - len(train_ex["words"])):
             tmp.append(0)
-        batch.append(tmp)
-    if(len(batch) > 0):
-        train_input.append(batch)
-
+        train_input.append(tmp)
     
     for test_ex in test_set:
         test_output_region.append(test_ex["region_id"])
         test_output_time.append(test_ex["time_id"])
+
+        #formats the input via dictionary
         tmp = []
         tmp.append(1)
         for word in test_ex["words"]:
@@ -223,6 +215,7 @@ if __name__ == '__main__':
                       hidden_size=args.hidden_size,
                       vocab_len=vocab_size,
                       epoch=args.epoch_size,
-                      learning_rate=args.lr)
-    model.train(train_input , train_output_region , train_output_time) 
+                      learning_rate=args.lr, 
+                      batch_size=args.batch_size)
+    model.train(numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
     model.test(test_input , test_output_region , test_output_time)

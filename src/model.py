@@ -6,6 +6,8 @@ import torch.nn.utils
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import numpy as np
+from torch.utils.data import Dataset, TensorDataset , DataLoader
+
 
 
 class RNN_Model(nn.Module):
@@ -16,20 +18,19 @@ class RNN_Model(nn.Module):
     @param vocab (List[str]): list of words
     """
 
-    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate):
+    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size):
         super(RNN_Model, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
-        self.num_regions = 3
-        self.num_time_periods = 2
         self.epoch_size = epoch
+        self.batch_size = batch_size
         self.model_embeddings = nn.Embedding(
             vocab_len, embed_size, padding_idx=0)
         
         #layers
         self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=False)
         self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
-        self.linear_time = nn.Linear(hidden_size , 8 , bias=False)
+        self.linear_time = nn.Linear(hidden_size , 4 , bias=False)
 
         #functions and optimizers
         self.softmax = nn.Softmax(1)
@@ -39,39 +40,46 @@ class RNN_Model(nn.Module):
     """Forward props the RNN, returns both the output tensor for the location and the period. 
 
 
-    @param input_batch, a maxl by batch_size input that is a list of lists
+    @param input_batch, a maxl by batch_size input that is a tensor
     
     """
     def forward(self , input_batch):
-        x = torch.tensor(input_batch).t()
-        x = self.model_embeddings(x)
-        o , (h_final , c)= self.rnn_lstm(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
-        rnn_output = o[3]
+        x = self.model_embeddings(input_batch).permute(1 , 0 , 2)
+        o , _ = self.rnn_lstm(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
+        rnn_output = o[-1]
         output_region = self.softmax(self.linear_region(rnn_output))
         output_time = self.softmax(self.linear_time(rnn_output))
         return output_region , output_time
         # default values
     def train(self , train_input , train_output_region , train_output_time):
+        train_input = torch.from_numpy(train_input).long()
+        train_output_region = torch.from_numpy(train_output_region).long()
+        train_output_time = torch.from_numpy(train_output_time).long()
+        train_data = TensorDataset(train_input , train_output_region , train_output_time)
+        train_loader = DataLoader(dataset=train_data, batch_size=self.batch_size)
         for epoc in range(0 , self.epoch_size):
             print(epoc)
-            for i in range(0 , len(train_input)):
+            totalLossRegion = torch.tensor(0.0)
+            totalLossTime = torch.tensor(0.0)
+            for train_input , train_output_region , train_output_time in train_loader:
                 self.optimizer.zero_grad()
-                batch_input = train_input[i]
-                prediction_region , prediction_time = self.forward(batch_input)
-                batch_output_region = torch.tensor(train_output_region[i])
-                batch_output_time = torch.tensor(train_output_time[i])
-                loss = self.cost(prediction_region , batch_output_region)
+                prediction_region , prediction_time = self.forward(train_input)
+                loss = self.cost(prediction_region , train_output_region)
                 loss.backward(retain_graph=True)
-                loss = self.cost(prediction_time , batch_output_time)
+                totalLossRegion += loss
+                loss = self.cost(prediction_time , train_output_time)
                 loss.backward()
+                totalLossTime += loss
                 self.optimizer.step()
+            print("Cross Entropy Loss for Region Classification:", totalLossRegion.tolist())
+            print("Cross Entropy Loss for Time Period Classification:", totalLossTime.tolist())
         return
     def test(self , test_input , test_output_region , test_output_time):
 
-        confusion_time = np.zeros((8 , 8))
+        confusion_time = np.zeros((4 , 4))
         confusion_region = np.zeros((2 , 2))
         for i in range(0 , len(test_input)):
-                prediction_region , prediction_time = self.forward([test_input[i]])
+                prediction_region , prediction_time = self.forward(torch.tensor([test_input[i]]))
                 pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
                 ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
                 confusion_time[ptime][test_output_time[i]] += 1
