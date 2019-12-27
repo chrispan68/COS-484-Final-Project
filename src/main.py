@@ -1,7 +1,8 @@
 import math
 import time
 import argparse
-from model import RNN_Model
+from model import RNN_Singletask
+from model import RNN_Multitask
 import numpy as numpy
 from typing import List
 from tqdm import tqdm
@@ -217,7 +218,7 @@ if __name__ == '__main__':
                           epoch=args.epoch_size,
                           learning_rate=args.lr, 
                           batch_size=args.batch_size)
-    else if args.model_type == "single_task":
+    elif args.model_type == "single_task":
         model = RNN_Singletask(embed_size=args.embed_size,
                           hidden_size=args.hidden_size,
                           vocab_len=vocab_size,

@@ -19,7 +19,7 @@ class RNN_Multitask(nn.Module):
     """
 
     def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size):
-        super(RNN_Model, self).__init__()
+        super(RNN_Multitask, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
         self.epoch_size = epoch
@@ -28,7 +28,7 @@ class RNN_Multitask(nn.Module):
             vocab_len, embed_size, padding_idx=0)
         
         #layers
-        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=False)
+        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=True)
         self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
         self.linear_time = nn.Linear(hidden_size , 4 , bias=False)
 
@@ -102,7 +102,7 @@ class RNN_Singletask(nn.Module):
     """
 
     def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size):
-        super(RNN_Model, self).__init__()
+        super(RNN_Singletask, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
         self.epoch_size = epoch
@@ -111,7 +111,8 @@ class RNN_Singletask(nn.Module):
             vocab_len, embed_size, padding_idx=0)
         
         #layers
-        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=False)
+        self.rnn_lstm_region = nn.LSTM(embed_size , hidden_size, bidirectional=False)
+        self.rnn_lstm_time = nn.LSTM(embed_size , hidden_size, bidirectional=False)
         self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
         self.linear_time = nn.Linear(hidden_size , 4 , bias=False)
 
@@ -128,10 +129,10 @@ class RNN_Singletask(nn.Module):
     """
     def forward(self , input_batch):
         x = self.model_embeddings(input_batch).permute(1 , 0 , 2)
-        o , _ = self.rnn_lstm(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
-        rnn_output = o[-1]
-        output_region = self.softmax(self.linear_region(rnn_output))
-        output_time = self.softmax(self.linear_time(rnn_output))
+        o , _ = self.rnn_lstm_region(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
+        output_region = self.softmax(self.linear_region(o[-1]))
+        o , _ = self.rnn_lstm_time(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
+        output_time = self.softmax(self.linear_time(o[-1]))
         return output_region , output_time
         # default values
     def train(self , train_input , train_output_region , train_output_time):
