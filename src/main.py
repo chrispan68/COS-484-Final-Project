@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", default="basic", type=str,
-                        choices=["basic"], help="the model version to be used")
+                        choices=["basic" , "single_task"], help="the model version to be used")
     parser.add_argument("--source", default=None, type=str,
                         help="source file, with metadata")
     parser.add_argument("--batch_size", default=32, type=int)
@@ -210,12 +210,19 @@ if __name__ == '__main__':
         for i in range(0 , maxl - 1 - len(test_ex["words"])):
             tmp.append(0)
         test_input.append(tmp)
-    
-    model = RNN_Model(embed_size=args.embed_size,
-                      hidden_size=args.hidden_size,
-                      vocab_len=vocab_size,
-                      epoch=args.epoch_size,
-                      learning_rate=args.lr, 
-                      batch_size=args.batch_size)
+    if args.model_type == "basic":
+        model = RNN_Multitask(embed_size=args.embed_size,
+                          hidden_size=args.hidden_size,
+                          vocab_len=vocab_size,
+                          epoch=args.epoch_size,
+                          learning_rate=args.lr, 
+                          batch_size=args.batch_size)
+    else if args.model_type == "single_task":
+        model = RNN_Singletask(embed_size=args.embed_size,
+                          hidden_size=args.hidden_size,
+                          vocab_len=vocab_size,
+                          epoch=args.epoch_size,
+                          learning_rate=args.lr, 
+                          batch_size=args.batch_size)
     model.train(numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
     model.test(test_input , test_output_region , test_output_time)
