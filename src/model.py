@@ -18,7 +18,7 @@ class RNN_Multitask(nn.Module):
     @param vocab (List[str]): list of words
     """
 
-    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size):
+    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions):
         super(RNN_Multitask, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
@@ -26,11 +26,13 @@ class RNN_Multitask(nn.Module):
         self.batch_size = batch_size
         self.model_embeddings = nn.Embedding(
             vocab_len, embed_size, padding_idx=0)
+        self.numPeriods = numPeriods
+        self.numRegions = numRegions
         
         #layers
         self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=True)
-        self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
-        self.linear_time = nn.Linear(hidden_size , 4 , bias=False)
+        self.linear_region = nn.Linear(hidden_size*2 , numRegions , bias=False)
+        self.linear_time = nn.Linear(hidden_size*2 , numPeriods , bias=False)
 
         #functions and optimizers
         self.softmax = nn.Softmax(1)
@@ -45,7 +47,7 @@ class RNN_Multitask(nn.Module):
     """
     def forward(self , input_batch):
         x = self.model_embeddings(input_batch).permute(1 , 0 , 2)
-        o , _ = self.rnn_lstm(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
+        o , _ = self.rnn_lstm(x , (torch.randn(2 , len(input_batch) , self.hidden_size) , torch.randn(2 , len(input_batch) , self.hidden_size)))
         rnn_output = o[-1]
         output_region = self.softmax(self.linear_region(rnn_output))
         output_time = self.softmax(self.linear_time(rnn_output))
@@ -76,15 +78,15 @@ class RNN_Multitask(nn.Module):
         return
     def test(self , test_input , test_output_region , test_output_time):
 
-        confusion_time = np.zeros((4 , 4))
-        confusion_region = np.zeros((2 , 2))
+        confusion_time = np.zeros((self.numPeriods , self.numPeriods))
+        confusion_region = np.zeros((self.numRegions , self.numRegions))
         for i in range(0 , len(test_input)):
                 prediction_region , prediction_time = self.forward(torch.tensor([test_input[i]]))
                 pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
                 ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
                 confusion_time[ptime][test_output_time[i]] += 1
                 confusion_region[pregion][test_output_region[i]] += 1
-        print("Confusion matrix for time:")
+        print("Confusion matrix for time period:")
         print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
             for row in confusion_time.tolist()]))
         print("Confusion matrix for region:")
@@ -101,7 +103,7 @@ class RNN_Singletask(nn.Module):
     @param vocab (List[str]): list of words
     """
 
-    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size):
+    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions):
         super(RNN_Singletask, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
@@ -109,12 +111,14 @@ class RNN_Singletask(nn.Module):
         self.batch_size = batch_size
         self.model_embeddings = nn.Embedding(
             vocab_len, embed_size, padding_idx=0)
+        self.numPeriods = numPeriods
+        self.numRegions = numRegions
         
         #layers
-        self.rnn_lstm_region = nn.LSTM(embed_size , hidden_size, bidirectional=False)
-        self.rnn_lstm_time = nn.LSTM(embed_size , hidden_size, bidirectional=False)
-        self.linear_region = nn.Linear(hidden_size , 2 , bias=False)
-        self.linear_time = nn.Linear(hidden_size , 4 , bias=False)
+        self.rnn_lstm_region = nn.LSTM(embed_size , hidden_size, bidirectional=True)
+        self.rnn_lstm_time = nn.LSTM(embed_size , hidden_size, bidirectional=True)
+        self.linear_region = nn.Linear(hidden_size , numRegions , bias=False)
+        self.linear_time = nn.Linear(hidden_size , numPeriods, bias=False)
 
         #functions and optimizers
         self.softmax = nn.Softmax(1)
@@ -128,10 +132,10 @@ class RNN_Singletask(nn.Module):
     
     """
     def forward(self , input_batch):
-        x = self.model_embeddings(input_batch).permute(1 , 0 , 2)
-        o , _ = self.rnn_lstm_region(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
+        x = self.model_embeddings(input_batch).permute(1 , 0 , 2)   
+        o , _ = self.rnn_lstm_region(x , (torch.randn(2 , len(input_batch) , self.hidden_size) , torch.randn(2 , len(input_batch) , self.hidden_size)))
         output_region = self.softmax(self.linear_region(o[-1]))
-        o , _ = self.rnn_lstm_time(x , (torch.randn(1 , len(input_batch) , self.hidden_size) , torch.randn(1 , len(input_batch) , self.hidden_size)))
+        o , _ = self.rnn_lstm_time(x , (torch.randn(2 , len(input_batch) , self.hidden_size) , torch.randn(2 , len(input_batch) , self.hidden_size)))
         output_time = self.softmax(self.linear_time(o[-1]))
         return output_region , output_time
         # default values
@@ -160,15 +164,15 @@ class RNN_Singletask(nn.Module):
         return
     def test(self , test_input , test_output_region , test_output_time):
 
-        confusion_time = np.zeros((4 , 4))
-        confusion_region = np.zeros((2 , 2))
+        confusion_time = np.zeros((numPeriods , numPeriods))
+        confusion_region = np.zeros((numRegions , numRegions))
         for i in range(0 , len(test_input)):
                 prediction_region , prediction_time = self.forward(torch.tensor([test_input[i]]))
                 pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
                 ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
                 confusion_time[ptime][test_output_time[i]] += 1
                 confusion_region[pregion][test_output_region[i]] += 1
-        print("Confusion matrix for time:")
+        print("Confusion matrix for time periods:")
         print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
             for row in confusion_time.tolist()]))
         print("Confusion matrix for region:")
