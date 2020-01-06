@@ -3,6 +3,8 @@ import time
 import argparse
 from model import RNN_Singletask
 from model import RNN_Multitask
+from model import train
+from model import test
 import numpy as numpy
 from typing import List
 from tqdm import tqdm
@@ -209,8 +211,8 @@ if __name__ == '__main__':
                           numPeriods=numPeriods,
                           numRegions=numRegions)
 
-    model.train(numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
-    model.test(test_input , test_output_region , test_output_time)
+    train(model , numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
+    test(model, test_input , test_output_region , test_output_time)
 
 """
 Trial 1:

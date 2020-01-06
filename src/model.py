@@ -11,11 +11,16 @@ from torch.utils.data import Dataset, TensorDataset , DataLoader
 
 
 class RNN_Multitask(nn.Module):
-    """Basic RNN LSTM classifier
+    """Basic RNN LSTM multiclass classifier
 
-    @param embed_size (int): Size of word embedding
-    @param hidden_size (int): Size of hidden vector
-    @param vocab (List[str]): list of words
+    @param embed_size (int): size of word embedding
+    @param hidden_size (int): size of hidden vector
+    @param vocab_len (int): size of our vocabulary
+    @param epoch (int): number of epocs run through
+    @param learning_rate (int): learning rate of optimization
+    @param batch_size (int): Number of examples per batch
+    @param numRegions (int): Number of total regions we are classifying from
+    @param numPeriods (int): Number of total time periods we are classifying from
     """
 
     def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions):
@@ -53,54 +58,19 @@ class RNN_Multitask(nn.Module):
         output_time = self.softmax(self.linear_time(rnn_output))
         return output_region , output_time
         # default values
-    def train(self , train_input , train_output_region , train_output_time):
-        train_input = torch.from_numpy(train_input).long()
-        train_output_region = torch.from_numpy(train_output_region).long()
-        train_output_time = torch.from_numpy(train_output_time).long()
-        train_data = TensorDataset(train_input , train_output_region , train_output_time)
-        train_loader = DataLoader(dataset=train_data, batch_size=self.batch_size)
-        for epoc in range(0 , self.epoch_size):
-            print(epoc)
-            totalLossRegion = torch.tensor(0.0)
-            totalLossTime = torch.tensor(0.0)
-            for train_input , train_output_region , train_output_time in train_loader:
-                self.optimizer.zero_grad()
-                prediction_region , prediction_time = self.forward(train_input)
-                loss = self.cost(prediction_region , train_output_region)
-                loss.backward(retain_graph=True)
-                totalLossRegion += loss
-                loss = self.cost(prediction_time , train_output_time)
-                loss.backward()
-                totalLossTime += loss
-                self.optimizer.step()
-            print("Cross Entropy Loss for Region Classification:", totalLossRegion.tolist())
-            print("Cross Entropy Loss for Time Period Classification:", totalLossTime.tolist())
-        return
-    def test(self , test_input , test_output_region , test_output_time):
-
-        confusion_time = np.zeros((self.numPeriods , self.numPeriods))
-        confusion_region = np.zeros((self.numRegions , self.numRegions))
-        for i in range(0 , len(test_input)):
-                prediction_region , prediction_time = self.forward(torch.tensor([test_input[i]]))
-                pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
-                ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
-                confusion_time[ptime][test_output_time[i]] += 1
-                confusion_region[pregion][test_output_region[i]] += 1
-        print("Confusion matrix for time period:")
-        print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
-            for row in confusion_time.tolist()]))
-        print("Confusion matrix for region:")
-        print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
-            for row in confusion_region.tolist()]))
-        return
-
 
 class RNN_Singletask(nn.Module):
-    """Basic RNN LSTM classifier, single task version
+    """Basic RNN LSTM single task classifier. This model is actually two 
+    RNN's since we need to do two problems simultaneously. 
 
-    @param embed_size (int): Size of word embedding
-    @param hidden_size (int): Size of hidden vector
-    @param vocab (List[str]): list of words
+    @param embed_size (int): size of word embedding
+    @param hidden_size (int): size of hidden vector
+    @param vocab_len (int): size of our vocabulary
+    @param epoch (int): number of epocs run through
+    @param learning_rate (int): learning rate of optimization
+    @param batch_size (int): Number of examples per batch
+    @param numRegions (int): Number of total regions we are classifying from
+    @param numPeriods (int): Number of total time periods we are classifying from
     """
 
     def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions):
@@ -139,43 +109,64 @@ class RNN_Singletask(nn.Module):
         output_time = self.softmax(self.linear_time(o[-1]))
         return output_region , output_time
         # default values
-    def train(self , train_input , train_output_region , train_output_time):
-        train_input = torch.from_numpy(train_input).long()
-        train_output_region = torch.from_numpy(train_output_region).long()
-        train_output_time = torch.from_numpy(train_output_time).long()
-        train_data = TensorDataset(train_input , train_output_region , train_output_time)
-        train_loader = DataLoader(dataset=train_data, batch_size=self.batch_size)
-        for epoc in range(0 , self.epoch_size):
-            print(epoc)
-            totalLossRegion = torch.tensor(0.0)
-            totalLossTime = torch.tensor(0.0)
-            for train_input , train_output_region , train_output_time in train_loader:
-                self.optimizer.zero_grad()
-                prediction_region , prediction_time = self.forward(train_input)
-                loss = self.cost(prediction_region , train_output_region)
-                loss.backward(retain_graph=True)
-                totalLossRegion += loss
-                loss = self.cost(prediction_time , train_output_time)
-                loss.backward()
-                totalLossTime += loss
-                self.optimizer.step()
-            print("Cross Entropy Loss for Region Classification:", totalLossRegion.tolist())
-            print("Cross Entropy Loss for Time Period Classification:", totalLossTime.tolist())
-        return
-    def test(self , test_input , test_output_region , test_output_time):
 
-        confusion_time = np.zeros((numPeriods , numPeriods))
-        confusion_region = np.zeros((numRegions , numRegions))
-        for i in range(0 , len(test_input)):
-                prediction_region , prediction_time = self.forward(torch.tensor([test_input[i]]))
-                pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
-                ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
-                confusion_time[ptime][test_output_time[i]] += 1
-                confusion_region[pregion][test_output_region[i]] += 1
-        print("Confusion matrix for time periods:")
-        print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
-            for row in confusion_time.tolist()]))
-        print("Confusion matrix for region:")
-        print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
-            for row in confusion_region.tolist()]))
-        return
+"""
+This method takes in a model, training input, and training output, and trains the model 
+based on its training parameters
+
+@param model (nn.Module): The model being trained
+@train_input (numpy array): The training input examples
+@train_output_region (numpy array): The training region labels
+@train_output_time (numpy array): The training time period labels. 
+"""
+def train(model , train_input , train_output_region , train_output_time):
+    train_input = torch.from_numpy(train_input).long()
+    train_output_region = torch.from_numpy(train_output_region).long()
+    train_output_time = torch.from_numpy(train_output_time).long()
+    train_data = TensorDataset(train_input , train_output_region , train_output_time)
+    train_loader = DataLoader(dataset=train_data, batch_size=model.batch_size)
+    for epoc in range(0 , model.epoch_size):
+        print(epoc)
+        totalLossRegion = torch.tensor(0.0)
+        totalLossTime = torch.tensor(0.0)
+        for train_input , train_output_region , train_output_time in train_loader:
+            model.optimizer.zero_grad()
+            prediction_region , prediction_time = model.forward(train_input)
+            loss = model.cost(prediction_region , train_output_region)
+            loss.backward(retain_graph=True)
+            totalLossRegion += loss
+            loss = model.cost(prediction_time , train_output_time)
+            loss.backward()
+            totalLossTime += loss
+            model.optimizer.step()
+        print("Cross Entropy Loss for Region Classification:", totalLossRegion.tolist())
+        print("Cross Entropy Loss for Time Period Classification:", totalLossTime.tolist())
+    return
+
+"""
+This method takes in a model, testing input, and testing output, and computes
+the confusion matrix for both the region classification and time preiod
+classification problems. 
+
+@param model (nn.Module): The model being tested
+@train_input (numpy array): The testing input examples
+@train_output_region (numpy array): The testing region labels
+@train_output_time (numpy array): The testing time period labels. 
+"""
+def test(model , test_input , test_output_region , test_output_time):
+
+    confusion_time = np.zeros((model.numPeriods , model.numPeriods))
+    confusion_region = np.zeros((model.numRegions , model.numRegions))
+    for i in range(0 , len(test_input)):
+            prediction_region , prediction_time = model.forward(torch.tensor([test_input[i]]))
+            pregion = torch.argmax(prediction_region, dim=1).tolist()[0]
+            ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
+            confusion_time[ptime][test_output_time[i]] += 1
+            confusion_region[pregion][test_output_region[i]] += 1
+    print("Confusion matrix for time periods:")
+    print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
+        for row in confusion_time.tolist()]))
+    print("Confusion matrix for region:")
+    print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
+        for row in confusion_region.tolist()]))
+    return
