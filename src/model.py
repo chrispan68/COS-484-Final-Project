@@ -117,8 +117,8 @@ class RNN_Singletask(nn.Module):
         #layers
         self.rnn_lstm_region = nn.LSTM(embed_size , hidden_size, bidirectional=True)
         self.rnn_lstm_time = nn.LSTM(embed_size , hidden_size, bidirectional=True)
-        self.linear_region = nn.Linear(hidden_size , numRegions , bias=False)
-        self.linear_time = nn.Linear(hidden_size , numPeriods, bias=False)
+        self.linear_region = nn.Linear(2*hidden_size , numRegions , bias=False)
+        self.linear_time = nn.Linear(2*hidden_size , numPeriods, bias=False)
 
         #functions and optimizers
         self.softmax = nn.Softmax(1)
