@@ -217,7 +217,7 @@ if __name__ == '__main__':
 """
 Trial 1:
 cap=100 
-epoc=100
+epoch=100
 hidden=64
 
 Confusion matrix for time period:
@@ -273,7 +273,7 @@ Confusion matrix for region:
 
 Trial 5:
 cap=50
-epoc=50
+epoch=50
 hidden=32
 model=2singletasks
 """

@@ -118,8 +118,9 @@ based on its training parameters
 @train_input (numpy array): The training input examples
 @train_output_region (numpy array): The training region labels
 @train_output_time (numpy array): The training time period labels. 
+@graph_f1 (boolean): Whether or not we graph the f1 score as we train, false by default
 """
-def train(model , train_input , train_output_region , train_output_time):
+def train(model , train_input , train_output_region , train_output_time , graph_f1=False):
     train_input = torch.from_numpy(train_input).long()
     train_output_region = torch.from_numpy(train_output_region).long()
     train_output_time = torch.from_numpy(train_output_time).long()
