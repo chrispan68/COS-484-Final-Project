@@ -118,9 +118,8 @@ based on its training parameters
 @train_input (numpy array): The training input examples
 @train_output_region (numpy array): The training region labels
 @train_output_time (numpy array): The training time period labels. 
-@graph_f1 (boolean): Whether or not we graph the f1 score as we train, false by default
 """
-def train(model , train_input , train_output_region , train_output_time , graph_f1=False):
+def train(model , train_input , train_output_region , train_output_time):
     train_input = torch.from_numpy(train_input).long()
     train_output_region = torch.from_numpy(train_output_region).long()
     train_output_time = torch.from_numpy(train_output_time).long()
@@ -164,10 +163,45 @@ def test(model , test_input , test_output_region , test_output_time):
             ptime = torch.argmax(prediction_time, dim=1).tolist()[0]
             confusion_time[ptime][test_output_time[i]] += 1
             confusion_region[pregion][test_output_region[i]] += 1
-    print("Confusion matrix for time periods:")
-    print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
-        for row in confusion_time.tolist()]))
-    print("Confusion matrix for region:")
-    print('\n'.join([''.join(['{:6}'.format(item) for item in row]) 
+    
+    #Computing precision, recall, f1
+    oSumRegion = sum(confusion_region)
+    pSumRegion = sum(confusion_region.T)
+    trueRegion = np.diagonal(confusion_region)
+    oSumTime = sum(confusion_time)
+    pSumTime = sum(confusion_time.T)
+    trueTime = np.diagonal(confusion_time)
+    
+    #Precision uses pSum, Recall uses oSum
+    precisionRegion = trueRegion / pSumRegion
+    recallRegion = trueRegion / oSumRegion
+    precisionTime = trueTime / pSumTime
+    recallTime = trueTime / oSumTime
+    f1Region = (2 * precisionRegion * recallRegion) / (precisionRegion + recallRegion)
+    f1Time = (2 * precisionTime * recallTime) / (precisionTime + recallTime)
+
+    #print out precision and recall
+    print("Summary statistics for Region Classification:")
+    print("Confusion Matrix:")
+    print('\n'.join([''.join(['{:7}'.format(item) for item in row]) 
         for row in confusion_region.tolist()]))
+    print("Precision:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in precisionRegion])])) 
+    print("Recall:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in recallRegion])]))
+    print("F1 Score:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in f1Region])]))
+    print()
+    print("Summary statistics for Time Period Classification:")
+    print("Confusion Matrix:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in row]) 
+        for row in confusion_time.tolist()]))
+    print("Precision:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in precisionTime])])) 
+    print("Recall:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in recallTime])]))
+    print("F1 Score:")
+    print('\n'.join([''.join(['{:7}'.format(round(item , 4)) for item in f1Time])]))
+
+
     return

@@ -213,3 +213,8 @@ if __name__ == '__main__':
 
     train(model , numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
     test(model, test_input , test_output_region , test_output_time)
+    print()
+    print()
+    print("Training Results:")
+    print()
+    test(model, train_input , train_output_region , train_output_time)
