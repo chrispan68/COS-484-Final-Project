@@ -1,10 +1,7 @@
 import math
 import time
 import argparse
-from model import RNN_Singletask
-from model import RNN_Multitask
-from model import train
-from model import test
+from model import RNN_Model
 import numpy as numpy
 from typing import List
 from tqdm import tqdm
@@ -36,7 +33,7 @@ def tokenize(example_set):
         words = []
         for sentence in example["long_text"]:
             words += sentence.split()
-            words += "."
+            #words += "."
         example["long_text"] = words
 
 """
@@ -172,11 +169,6 @@ if __name__ == '__main__':
     train_set = [x for x in train_set if validate(x)]
     tokenize(test_set)
     tokenize(train_set)
-    
-    print(len(train_set))
-    print(len(test_set))
-
-    print(train_set[0])
 
     vocab = getVocab(train_set)
     maxL = min(getMaxL(train_set , test_set) , args.cap)
@@ -196,30 +188,23 @@ if __name__ == '__main__':
     
     train_input , train_output_region , train_output_time = getInput(train_set , word2id , period2id , region2id , maxL)
     test_input , test_output_region , test_output_time = getInput(test_set , word2id , period2id , region2id , maxL) 
+    
+    print(train_set[0])
+    print(train_input[0])
+    print(train_output_region[0])
+    print(train_output_time[0])
 
-    if args.model_type == "basic":
-        model = RNN_Multitask(embed_size=args.embed_size,
-                          hidden_size=args.hidden_size,
-                          vocab_len=vocab_size,
-                          epoch=args.epoch_size,
-                          learning_rate=args.lr, 
-                          batch_size=args.batch_size,
-                          numPeriods=numPeriods,
-                          numRegions=numRegions)
-    elif args.model_type == "single_task":
-        model = RNN_Singletask(embed_size=args.embed_size,
-                          hidden_size=args.hidden_size,
-                          vocab_len=vocab_size,
-                          epoch=args.epoch_size,
-                          learning_rate=args.lr, 
-                          batch_size=args.batch_size,
-                          numPeriods=numPeriods,
-                          numRegions=numRegions)
+    model = RNN_Model(embed_size=args.embed_size,
+                        hidden_size=args.hidden_size,
+                        vocab_len=vocab_size,
+                        epoch=args.epoch_size,
+                        learning_rate=args.lr, 
+                        batch_size=args.batch_size)
 
-    train(model , numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
-    test(model, test_input , test_output_region , test_output_time)
+    model.train(numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
+    model.test(test_input , test_output_region , test_output_time)
     print()
     print()
     print("Training Results:")
     print()
-    test(model, train_input , train_output_region , train_output_time)
+    model.test(train_input , train_output_region , train_output_time)
