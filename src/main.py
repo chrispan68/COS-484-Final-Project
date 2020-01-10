@@ -36,7 +36,6 @@ def tokenize(example_set):
         words = []
         for sentence in example["long_text"]:
             words += sentence.split()
-            words += "."
         example["long_text"] = words
 
 """
@@ -95,13 +94,17 @@ label indices.
 @return period2id, the dictionary used to convert periods to indices. 
 """
 def getPeriodLabels(train_set):
+    periods = []
     period2id = {}
     numPeriods = 0
     for train_ex in train_set:
         if not train_ex['period'] == None:
-            if not train_ex['period'] in period2id:
-                period2id[train_ex['period']] = numPeriods
-                numPeriods += 1
+            if not train_ex['period'] in periods:
+                periods.append(train_ex['period'])
+    periods = sorted(periods)
+    for period in periods:
+        period2id[period] = numPeriods
+        numPeriods += 1
     return period2id , numPeriods
 
 """
@@ -152,8 +155,8 @@ if __name__ == '__main__':
             torch.__version__)
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", default="basic", type=str,
-                        choices=["basic" , "single_task"], help="the model version to be used")
+    parser.add_argument("--model_type", default="multi_task", type=str,
+                        choices=["multi_task" , "single_task"], help="the model version to be used")
     parser.add_argument("--sourcetest", default=None, type=str,
                         help="source test file, with metadata")
     parser.add_argument("--sourcetrain", default=None, type=str,
@@ -164,6 +167,9 @@ if __name__ == '__main__':
     parser.add_argument("--epoch_size", default=50, type=int)
     parser.add_argument("--lr", default=0.01, type=float)
     parser.add_argument("--cap", default=float('INF'), type=int)
+    parser.add_argument("--bidirectional", default=False , type=bool)
+    parser.add_argument("--layers", default=1 , type=int)
+    parser.add_argument("--dropout", default = 0.0 , type=float)
     args = parser.parse_args()
     
     test_set = pickle.load(open(args.sourcetest , "rb"))
@@ -172,11 +178,6 @@ if __name__ == '__main__':
     train_set = [x for x in train_set if validate(x)]
     tokenize(test_set)
     tokenize(train_set)
-    
-    print(len(train_set))
-    print(len(test_set))
-
-    print(train_set[0])
 
     vocab = getVocab(train_set)
     maxL = min(getMaxL(train_set , test_set) , args.cap)
@@ -193,11 +194,12 @@ if __name__ == '__main__':
     
     region2id , numRegions = getRegionLabels(train_set)
     period2id , numPeriods = getPeriodLabels(train_set)
+    print(period2id)
     
     train_input , train_output_region , train_output_time = getInput(train_set , word2id , period2id , region2id , maxL)
     test_input , test_output_region , test_output_time = getInput(test_set , word2id , period2id , region2id , maxL) 
 
-    if args.model_type == "basic":
+    if args.model_type == "multi_task":
         model = RNN_Multitask(embed_size=args.embed_size,
                           hidden_size=args.hidden_size,
                           vocab_len=vocab_size,
@@ -205,7 +207,10 @@ if __name__ == '__main__':
                           learning_rate=args.lr, 
                           batch_size=args.batch_size,
                           numPeriods=numPeriods,
-                          numRegions=numRegions)
+                          numRegions=numRegions,
+                          bidirectional=args.bidirectional,
+                          layers = args.layers,
+                          dropout=args.dropout)
     elif args.model_type == "single_task":
         model = RNN_Singletask(embed_size=args.embed_size,
                           hidden_size=args.hidden_size,
@@ -214,7 +219,10 @@ if __name__ == '__main__':
                           learning_rate=args.lr, 
                           batch_size=args.batch_size,
                           numPeriods=numPeriods,
-                          numRegions=numRegions)
+                          numRegions=numRegions,
+                          bidirectional=args.bidirectional,
+                          layers = args.layers,
+                          dropout=args.dropout)
 
     train(model , numpy.asarray(train_input) , numpy.asarray(train_output_region) , numpy.asarray(train_output_time)) 
     test(model, test_input , test_output_region , test_output_time)

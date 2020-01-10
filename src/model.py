@@ -23,7 +23,7 @@ class RNN_Multitask(nn.Module):
     @param numPeriods (int): Number of total time periods we are classifying from
     """
 
-    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions):
+    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions , bidirectional=True , layers=1 , dropout=0):
         super(RNN_Multitask, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
@@ -33,12 +33,14 @@ class RNN_Multitask(nn.Module):
             vocab_len, embed_size, padding_idx=0)
         self.numPeriods = numPeriods
         self.numRegions = numRegions
-        
+        self.bidirectional = bidirectional
+        self.dropout = dropout
+        self.numLayers = layers
+        self.numDirections = 2 if self.bidirectional else 1
         #layers
-        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=True)
-        self.linear_region = nn.Linear(hidden_size*2 , numRegions , bias=False)
-        self.linear_time = nn.Linear(hidden_size*2 , numPeriods , bias=False)
-
+        self.rnn_lstm = nn.LSTM(embed_size , hidden_size, bidirectional=self.bidirectional , num_layers=self.numLayers , dropout=self.dropout)
+        self.linear_region = nn.Linear(hidden_size*self.numDirections , numRegions , bias=False)
+        self.linear_time = nn.Linear(hidden_size*self.numDirections , numPeriods , bias=False)
         #functions and optimizers
         self.softmax = nn.Softmax(1)
         self.optimizer = torch.optim.Adam(self.parameters() , lr=learning_rate)
@@ -52,7 +54,8 @@ class RNN_Multitask(nn.Module):
     """
     def forward(self , input_batch):
         x = self.model_embeddings(input_batch).permute(1 , 0 , 2)
-        o , _ = self.rnn_lstm(x , (torch.randn(2 , len(input_batch) , self.hidden_size) , torch.randn(2 , len(input_batch) , self.hidden_size)))
+        
+        o , _ = self.rnn_lstm(x , (torch.randn(self.numDirections * self.numLayers , len(input_batch) , self.hidden_size) , torch.randn(self.numDirections * self.numLayers , len(input_batch) , self.hidden_size)))
         rnn_output = o[-1]
         output_region = self.softmax(self.linear_region(rnn_output))
         output_time = self.softmax(self.linear_time(rnn_output))
@@ -73,7 +76,7 @@ class RNN_Singletask(nn.Module):
     @param numPeriods (int): Number of total time periods we are classifying from
     """
 
-    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions):
+    def __init__(self, embed_size, hidden_size, vocab_len , epoch , learning_rate , batch_size , numPeriods , numRegions , bidirectional=True , layers=1 , dropout=0):
         super(RNN_Singletask, self).__init__()
         self.hidden_size = hidden_size
         self.embed_size = embed_size
@@ -83,12 +86,16 @@ class RNN_Singletask(nn.Module):
             vocab_len, embed_size, padding_idx=0)
         self.numPeriods = numPeriods
         self.numRegions = numRegions
+        self.bidirectional = bidirectional
+        self.dropout = dropout
+        self.numLayers = layers
+        self.numDirections = 2 if self.bidirectional else 1
         
         #layers
-        self.rnn_lstm_region = nn.LSTM(embed_size , hidden_size, bidirectional=True)
-        self.rnn_lstm_time = nn.LSTM(embed_size , hidden_size, bidirectional=True)
-        self.linear_region = nn.Linear(2*hidden_size , numRegions , bias=False)
-        self.linear_time = nn.Linear(2*hidden_size , numPeriods, bias=False)
+        self.rnn_lstm_region = nn.LSTM(embed_size , hidden_size, bidirectional=self.bidirectional , num_layers=self.numLayers , dropout=self.dropout)
+        self.rnn_lstm_time = nn.LSTM(embed_size , hidden_size, bidirectional=self.bidirectional , num_layers=self.numLayers , dropout=self.dropout)
+        self.linear_region = nn.Linear(self.numDirections*hidden_size , numRegions , bias=False)
+        self.linear_time = nn.Linear(self.numDirections*hidden_size , numPeriods, bias=False)
 
         #functions and optimizers
         self.softmax = nn.Softmax(1)
@@ -103,9 +110,9 @@ class RNN_Singletask(nn.Module):
     """
     def forward(self , input_batch):
         x = self.model_embeddings(input_batch).permute(1 , 0 , 2)   
-        o , _ = self.rnn_lstm_region(x , (torch.randn(2 , len(input_batch) , self.hidden_size) , torch.randn(2 , len(input_batch) , self.hidden_size)))
+        o , _ = self.rnn_lstm_region(x , (torch.randn(self.numLayers*self.numDirections , len(input_batch) , self.hidden_size) , torch.randn(self.numLayers*self.numDirections , len(input_batch) , self.hidden_size)))
         output_region = self.softmax(self.linear_region(o[-1]))
-        o , _ = self.rnn_lstm_time(x , (torch.randn(2 , len(input_batch) , self.hidden_size) , torch.randn(2 , len(input_batch) , self.hidden_size)))
+        o , _ = self.rnn_lstm_time(x , (torch.randn(self.numLayers*self.numDirections , len(input_batch) , self.hidden_size) , torch.randn(self.numLayers*self.numDirections , len(input_batch) , self.hidden_size)))
         output_time = self.softmax(self.linear_time(o[-1]))
         return output_region , output_time
         # default values

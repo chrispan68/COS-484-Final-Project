@@ -1,0 +1,33 @@
+Trial 4: 
+multi_task
+hiddensize 64
+epoch 50
+lr 0.01
+cap 25
+bidirectional = True
+layers = 2
+dropout = 0
+
+Summary statistics for Region Classification:
+Confusion Matrix:
+  189.0   72.0
+   93.0  210.0
+Precision:
+ 0.7241 0.6931
+Recall:
+ 0.6702 0.7447
+F1 Score:
+ 0.6961 0.7179
+
+Summary statistics for Time Period Classification:
+Confusion Matrix:
+   41.0    5.0    3.0    2.0
+   18.0   47.0   11.0    2.0
+   18.0   43.0   90.0   48.0
+   22.0   35.0   64.0  115.0
+Precision:
+ 0.8039 0.6026 0.4523 0.4873
+Recall:
+ 0.4141 0.3615 0.5357 0.6886
+F1 Score:
+ 0.5467 0.4519 0.4905 0.5707
